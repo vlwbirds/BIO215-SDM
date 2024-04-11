@@ -7,7 +7,6 @@ editor: visual
 ## Libraries
 
 ```{r}
-library(ggplot2)
 library(here)
 library(tidyverse)
 ```
@@ -102,5 +101,96 @@ combined_plot <- (plot1 | plot2) /
 
 # Print the combined plot
 combined_plot
+
+```
+
+## Response Curves
+
+```{r}
+# Step 1: Calculate means for all variables
+means <- colMeans(mammals_data[, c("bio3", "bio7", "bio11", "bio12")], na.rm = TRUE)
+
+# Step 2: Generate a sequence for the variable of interest, e.g., bio3
+bio3_range <- seq(min(mammals_data$bio3, na.rm = TRUE), max(mammals_data$bio3, na.rm = TRUE), length.out = 100)
+
+# Step 3: Create a new data frame for predictions
+new_data <- as.data.frame(matrix(rep(means, each = 100), ncol = 4))
+names(new_data) <- c("bio3", "bio7", "bio11", "bio12")
+new_data$bio3 <- bio3_range
+
+# Step 4: Make predictions
+predictions <- predict(glm1, newdata = new_data, type = "response")
+
+# Step 5: Plot the response curve
+plot(bio3_range, predictions, type = "l", xlab = "bio3", ylab = "Probability",
+     main = "Response Curve for bio3")
+
+```
+
+## Response Curves - All
+
+```{r}
+# Calculate means of the predictor variables
+mean_bio3 <- mean(mammals_data$bio3, na.rm = TRUE)
+mean_bio7 <- mean(mammals_data$bio7, na.rm = TRUE)
+mean_bio11 <- mean(mammals_data$bio11, na.rm = TRUE)
+mean_bio12 <- mean(mammals_data$bio12, na.rm = TRUE)
+
+# Define a function to create a response curve for a given variable
+create_response_curve <- function(glm_model, var_name, data_frame, mean_values) {
+  # Create a new data frame for predictions that varies the variable of interest across its range
+  # and sets all other variables to their mean.
+  variable_range <- seq(min(data_frame[[var_name]], na.rm = TRUE), max(data_frame[[var_name]], na.rm = TRUE), length.out = 100)
+  pred_data <- as.data.frame(lapply(data_frame, function(x) rep(mean(x, na.rm = TRUE), length.out = 100)))
+  pred_data[[var_name]] <- variable_range
+  
+  # Predict probabilities
+  pred_data$prediction <- predict(glm_model, newdata = pred_data, type = "response")
+  
+  # Return a ggplot object
+  ggplot(pred_data, aes_string(x = var_name, y = "prediction")) +
+    geom_line() + 
+    labs(x = var_name, y = "Probability of Occurrence") +
+    theme_minimal()
+}
+
+# Now apply the function to each variable for both models
+response_curves <- list(
+  bio3_glm1 = create_response_curve(glm1, "bio3", mammals_data, mean_values),
+  bio7_glm1 = create_response_curve(glm1, "bio7", mammals_data, mean_values),
+  bio11_glm1 = create_response_curve(glm1, "bio11", mammals_data, mean_values),
+  bio12_glm1 = create_response_curve(glm1, "bio12", mammals_data, mean_values),
+  bio3_glm2 = create_response_curve(glm2, "bio3", mammals_data, mean_values),
+  bio7_glm2 = create_response_curve(glm2, "bio7", mammals_data, mean_values),
+  bio11_glm2 = create_response_curve(glm2, "bio11", mammals_data, mean_values),
+  bio12_glm2 = create_response_curve(glm2, "bio12", mammals_data, mean_values)
+)
+
+combined_response_curve <- function(var_name, response_curves_glm1, response_curves_glm2) {
+  response_curves_glm1$data$glm <- 'glm1'
+  response_curves_glm2$data$glm <- 'glm2'
+  
+  combined_data <- rbind(response_curves_glm1$data, response_curves_glm2$data)
+  
+  ggplot(combined_data, aes_string(x = var_name, y = "prediction", linetype = "glm")) +
+    geom_line() +
+    labs(x = var_name, y = "Probability of Occurrence") +
+    theme_minimal()
+}
+
+# Create combined response curve plots
+p1 <- combined_response_curve("bio3", response_curves$bio3_glm1, response_curves$bio3_glm2)
+p2 <- combined_response_curve("bio7", response_curves$bio7_glm1, response_curves$bio7_glm2)
+p3 <- combined_response_curve("bio11", response_curves$bio11_glm1, response_curves$bio11_glm2)
+p4 <- combined_response_curve("bio12", response_curves$bio12_glm1, response_curves$bio12_glm2)
+
+# Arrange the plots into a grid
+library(gridExtra)
+## 
+## Attaching package: 'gridExtra'
+## The following object is masked from 'package:dplyr':
+## 
+##     combine
+grid.arrange(p1, p2, p3, p4, ncol = 2)
 
 ```
