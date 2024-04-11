@@ -7,6 +7,7 @@ editor: visual
 ## Libraries
 
 ```{r}
+library(ggplot2)
 library(here)
 library(tidyverse)
 ```
@@ -14,19 +15,92 @@ library(tidyverse)
 ## Data
 
 ```{r}
-mammal_data <- read_csv(here("data/mammals_and_bioclim_table.csv"))
+mammals_data <- read_csv(here("data/mammals_and_bioclim_table.csv"))
 view(data)
 summary(data)
 head(data)
 str(data)
-table(mammal_data$VulpesVulpes)
+table(mammals_data$VulpesVulpes)
 ```
 
-## GLM - Vulpes vulpes
+## GLM1 - Vulpes vulpes
 
 ```{r}
 glm1 <- glm(VulpesVulpes ~ 1 + bio3 + bio7 + bio11 + bio12,
-            data = mammal_data, family = "binomial")
+            data = mammals_data, family = "binomial")
 summary(glm1)
+
+```
+
+```{r}
+plot(glm1)
+```
+
+## GLM1 - Drop Bio7
+
+```{r}
+glm3 <- glm(VulpesVulpes ~ 1 + bio3 + bio7 + bio11,
+            data = mammals_data, family = "binomial")
+summary(glm3)
+```
+
+## GLM2 - Polynomial - Vulpes vulpes
+
+```{r}
+glm2 <- glm(VulpesVulpes ~ 1 + poly(bio3, 2) + poly(bio7,2) + poly(bio11, 2) + poly(bio12, 2), 
+            data = mammals_data,family = "binomial")
+summary(glm2)
+```
+
+```{r}
+plot(glm2)
+```
+
+## Plotting Data on Maps
+
+```{r}
+# GLM1
+mammals_data$predicted_prob_glm1 = predict(glm1, type = "response")
+
+# GLM2
+mammals_data$predicted_prob_glm2 = predict(glm2, type = "response")
+
+view(mammals_data)
+
+plot1 <- ggplot(mammals_data, aes(x = X_WGS84, y = Y_WGS84, color = factor(VulpesVulpes))) +
+  geom_point(alpha = 0.3, size = 1) + # Adjust size and alpha for better visualization
+  scale_color_manual(values = c("0" = "lightblue", "1" = "darkred")) + 
+  theme_minimal() +
+  labs(title = "Vulpes Vulpes Presence/Absence", x = "Longitude", y = "Latitude", color = "Vulpes Vulpes")
+
+
+plot2 <- ggplot(mammals_data, aes(x = X_WGS84, y = Y_WGS84, color = predicted_prob_glm1)) +
+  geom_point(alpha = 0.3, size = 1) + # Adjust size and alpha for better visualization
+  scale_color_gradient(low = "lightblue", high = "darkred") + 
+  theme_minimal() +
+  labs(title = "GLM with linear term", x = "Longitude", y = "Latitude", color = "Probability") +
+  theme(legend.position = "right")
+
+plot3 <- ggplot(mammals_data, aes(x = X_WGS84, y = Y_WGS84, color = predicted_prob_glm2)) +
+  geom_point(alpha = 0.3, size = 1) + # Adjust size and alpha for better visualization
+  scale_color_gradient(low = "lightblue", high = "darkred") + 
+  theme_minimal() +
+  labs(title = "GLM with quadratic terms", x = "Longitude", y = "Latitude", color = "Probability") +
+  theme(legend.position = "right")
+
+# Now, we'll install and load the patchwork package if it's not already installed
+if (!require(patchwork)) {
+  install.packages("patchwork")
+}
+## Loading required package: patchwork
+## Warning: package 'patchwork' was built under R version 4.3.2
+library(patchwork)
+
+# Arrange the plots in a single panel
+combined_plot <- (plot1 | plot2) /
+  (plot3 | plot_spacer())
+
+# Print the combined plot
+combined_plot
 
 ```
