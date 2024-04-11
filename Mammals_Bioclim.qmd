@@ -1,0 +1,19 @@
+---
+title: "GLM_GAM"
+format: html
+editor: visual
+---
+
+## Libraries
+
+```{r}
+library(here)
+library(tidyverse)
+```
+
+## Data
+
+```{r}
+data <- read_csv(here("data/mammals_and_bioclim_table"))
+view(data)
+```
