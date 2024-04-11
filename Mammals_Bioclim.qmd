@@ -14,6 +14,19 @@ library(tidyverse)
 ## Data
 
 ```{r}
-data <- read_csv(here("data/mammals_and_bioclim_table"))
+mammal_data <- read_csv(here("data/mammals_and_bioclim_table.csv"))
 view(data)
+summary(data)
+head(data)
+str(data)
+table(mammal_data$VulpesVulpes)
+```
+
+## GLM - Vulpes vulpes
+
+```{r}
+glm1 <- glm(VulpesVulpes ~ 1 + bio3 + bio7 + bio11 + bio12,
+            data = mammal_data, family = "binomial")
+summary(glm1)
+
 ```
